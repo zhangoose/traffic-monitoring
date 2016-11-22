@@ -1,0 +1,7 @@
+freezegun==0.3.8
+mock==2.0.0
+pytest==3.0.4
+python-dateutil==2.6.0
+pytz==2016.7
+schedule==0.3.2
+sh==1.11
