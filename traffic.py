@@ -5,15 +5,17 @@ import pytz
 import re
 import operator
 
-from helpers import utc_now
+from helpers import utc_now, format_dt
 
 
 class LogParser(object):
 
-    def __init__(self):
+    def __init__(self, start_time):
+        self.start_time = start_time
         self.logs = {}
         self.is_alert = False
         self.alert_logs = []
+        self.hits = {}
 
     def parse_log(self, line):
         """
@@ -85,8 +87,14 @@ class LogParser(object):
                     section_hits[section] = 1
 
         if section_hits != {}:
+            #self.hits = dict(self.hits.items() + section_hits.items())
+            for section_name, num_hits in section_hits.items():
+                if self.hits.get(section_name):
+                    self.hits[section_name] = self.hits[section_name] + num_hits
+                else:
+                    self.hits[section_name] = num_hits
+
             section_name = max(section_hits.iteritems(), key=operator.itemgetter(1))[0]
-            print("/{}".format(section_name), section_hits[section_name])
             return ("/{}".format(section_name), section_hits[section_name])
         else:
             return (None, None)
@@ -95,7 +103,7 @@ class LogParser(object):
         """
         `average_traffic` gives the average # of events that happened in the
         past `seconds` amount of seconds from the start date time.
-        """
+        """ 
         num_events = 0
         for i in range(0, seconds):
             time_key = (start - timedelta(seconds=i)).replace(microsecond=0) 
@@ -114,9 +122,7 @@ class LogParser(object):
         """
         now = utc_now()
         average_traffic = self.average_traffic(now, 120)
-        #print(average_traffic)
-        #message = ""
-        message = str(average_traffic)
+        message = ""
 
         if average_traffic > alert_number:
             self.is_alert = True
@@ -128,6 +134,31 @@ class LogParser(object):
             self.alert_logs.append((now, False, average_traffic))
             message = "Recovered! hits = {} at {}".format(average_traffic, now)
 
-        #if message:
-            #print(message)
-        return message
+        return message, average_traffic
+
+
+    def summary(self):
+        """
+        `summary` returns a high-level view of the overall traffic and alerts
+        generated and raised for a time period.
+        """
+        summary = ""
+        summary += "START: {}\nEND: {}\n\n".format(
+            format_dt(self.start_time), format_dt(utc_now()))
+
+        summary += "Overall Traffic:\n"
+        for section_name, num_hits in self.hits.items():
+            summary += "\t/{}: {}\n".format(section_name, num_hits)
+
+        num_alerts = 0
+        num_recoveries = 0
+        for alert in self.alert_logs:
+            if alert[1]:
+                num_alerts += 1
+            else:
+                num_recoveries += 1
+
+        summary += "\n\nNumber of high traffic alerts: {}\n".format(num_alerts)
+        summary += "Number of recoveries: {}\n".format(num_recoveries)
+        
+        return summary
