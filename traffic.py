@@ -114,8 +114,9 @@ class LogParser(object):
         """
         now = utc_now()
         average_traffic = self.average_traffic(now, 120)
-        print(average_traffic)
-        message = ""
+        #print(average_traffic)
+        #message = ""
+        message = str(average_traffic)
 
         if average_traffic > alert_number:
             self.is_alert = True
@@ -127,6 +128,6 @@ class LogParser(object):
             self.alert_logs.append((now, False, average_traffic))
             message = "Recovered! hits = {} at {}".format(average_traffic, now)
 
-        if message:
-            print(message)
+        #if message:
+            #print(message)
         return message
