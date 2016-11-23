@@ -71,7 +71,7 @@ def draw_alerts(alerts, current_alert, log_parser, alert_number):
     alerts.box()
     current_alert.box()
 
-    message, average_traffic = log_parser.alert(alert_number)
+    average_traffic = log_parser.alert(alert_number)
     messages = ""
     for alert_log in log_parser.alert_logs[-6:]:
         formatted_time = format_dt(alert_log[0])
@@ -80,7 +80,7 @@ def draw_alerts(alerts, current_alert, log_parser, alert_number):
         else:
             messages += "   [{}] Recovered! hits = {}\n".format(formatted_time, alert_log[2])
 
-    if average_traffic > alert_number:
+    if log_parser.is_alert:
         current_alert.addstr(5, 3, str(average_traffic), curses.A_STANDOUT)
     else:
         current_alert.addstr(5, 3, str(average_traffic))

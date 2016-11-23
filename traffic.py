@@ -87,7 +87,6 @@ class LogParser(object):
                     section_hits[section] = 1
 
         if section_hits != {}:
-            #self.hits = dict(self.hits.items() + section_hits.items())
             for section_name, num_hits in section_hits.items():
                 if self.hits.get(section_name):
                     self.hits[section_name] = self.hits[section_name] + num_hits
@@ -122,19 +121,16 @@ class LogParser(object):
         """
         now = utc_now()
         average_traffic = self.average_traffic(now, 120)
-        message = ""
 
         if average_traffic > alert_number:
             self.is_alert = True
             self.alert_logs.append((now, True, average_traffic))
-            message = "High traffic generated an alert - hits = {}, triggered at {}".format(average_traffic, now)
 
         elif self.is_alert:
             self.is_alert = False
             self.alert_logs.append((now, False, average_traffic))
-            message = "Recovered! hits = {} at {}".format(average_traffic, now)
 
-        return message, average_traffic
+        return average_traffic
 
 
     def summary(self):
