@@ -8,7 +8,7 @@ Consumes an actively written to w3c-formatted HTTP access log and provides metri
 * Every 1s: average traffic for past 2 minutes
 * Every 1s: alert/recovery message if average traffic > threshold
 
-![https://cl.ly/351e3f12243R](https://cl.ly/351e3f12243R)
+![img](https://d17oy1vhnax1f7.cloudfront.net/items/1l2P2l242U2x0m0l0F2B/Screen%20Recording%202016-11-23%20at%2009.15%20PM.gif?v=45c5f13d)
 
 ### Local Setup
 
