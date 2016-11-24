@@ -11,7 +11,7 @@ from traffic import LogParser
 
 @pytest.fixture(scope='function')
 def log_parser():
-    return LogParser()
+    return LogParser(datetime(2000, 10, 10, 20, 55, 36, tzinfo=UTC))
 
 
 def test_parse_log(log_parser):
@@ -72,6 +72,7 @@ def test_most_hits(log_parser):
     actual = log_parser.most_hits()
 
     assert expected == actual
+    assert log_parser.hits == {"blue": 1, "potatoes": 3}
 
 
 def test_average_traffic(log_parser):
@@ -104,7 +105,7 @@ def test_alert_normal_traffic(mock_average_traffic, log_parser):
     mock_average_traffic.assert_called_once_with(now, 120)
     assert log_parser.is_alert == False
     assert log_parser.alert_logs == []
-    assert "" == actual
+    assert 3 == actual
 
 
 @freeze_time("2012-01-01 03:21:34", tz_offset=-4)
@@ -112,14 +113,13 @@ def test_alert_normal_traffic(mock_average_traffic, log_parser):
 def test_alert_high_traffic(mock_average_traffic, log_parser):
     mock_average_traffic.return_value = 8
     now = datetime(2012, 1, 1, 3, 21, 34, tzinfo=UTC)
-    expected = "High traffic generated an alert - hits = 8, triggered at 2012-01-01 03:21:34+00:00"
 
     actual = log_parser.alert(5)
 
     mock_average_traffic.assert_called_once_with(now, 120)
     assert log_parser.is_alert == True
     assert log_parser.alert_logs == [(now, True, 8)]
-    assert expected == actual
+    assert 8 == actual
 
 
 @freeze_time("2012-01-01 03:21:34", tz_offset=-4)
@@ -129,7 +129,6 @@ def test_alert_recovered(mock_average_traffic, log_parser):
     now = datetime(2012, 1, 1, 3, 21, 34, tzinfo=UTC)
     log_parser.is_alert = True
     log_parser.alert_logs = [(now - timedelta(seconds=1), True, 8)]
-    expected = "Recovered! hits = 3 at 2012-01-01 03:21:34+00:00"
 
     actual = log_parser.alert(5)
 
@@ -138,4 +137,21 @@ def test_alert_recovered(mock_average_traffic, log_parser):
         (now - timedelta(seconds=1), True, 8),
         (now, False, 3)
     ]
+    assert 3 == actual
+
+
+@mock.patch("traffic.format_dt")
+def test_summary(mock_format_dt, log_parser):
+    mock_format_dt.side_effect = ["start time", "end time"]
+    log_parser.hits = {"potatoes": 3, "blue": 1}
+    log_parser.alert_logs = [(None, True, 1), (None, False, 2)]
+    expected = "START: start time\nEND: end time\n\n"\
+            "Overall Traffic:\n"\
+            "\t/blue: 1\n"\
+            "\t/potatoes: 3\n"\
+            "\n\nNumber of high traffic alerts: 1\n"\
+            "Number of recoveries: 1\n"
+
+    actual = log_parser.summary()
+
     assert expected == actual
