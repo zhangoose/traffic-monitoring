@@ -1,11 +1,12 @@
 from datetime import datetime, timedelta
 from dateutil.tz import tzoffset
 from dateutil import parser
-import pytz
 import re
 import operator
 
-from helpers import utc_now, format_dt
+from pytz import UTC
+
+from helpers import utc_now, format_dt, add_to_dict
 
 
 class LogParser(object):
@@ -48,7 +49,7 @@ class LogParser(object):
 
         # setting the timestamp
         parsed_line['timestamp'] = parser.parse(
-            split_line[3].replace(':', ' ', 1)).astimezone(pytz.UTC)
+            split_line[3].replace(':', ' ', 1)).astimezone(UTC)
 
         # setting the request method and resource
         split_http = split_line[4].split(" ")
@@ -56,6 +57,7 @@ class LogParser(object):
         parsed_line['resource'] = split_http[1]
         parsed_line['protocol'] = split_http[2]
 
+        # adding to a bucketed-by-second dictionary of all logs
         key_name = parsed_line['timestamp'].replace(microsecond=0)
 
         if self.logs.get(key_name):
@@ -65,43 +67,43 @@ class LogParser(object):
 
         return parsed_line
 
-
     def most_hits(self):
         """
         `most_hits` goes through the logs list for the time period between now
-        and 10 seconds ago and return a tuple:
+        and 10 seconds ago and returns:
 
         (<section that got the most hits>, <how many hits>)
         """
-        section_hits = {} 
-        now = datetime.utcnow().replace(tzinfo=pytz.UTC)
+        section_hits = {}
+        now = datetime.utcnow().replace(tzinfo=UTC)
+
+        # going through past 10 seconds of data
         for i in range(0, 10):
             time_key = (now - timedelta(seconds=i)).replace(microsecond=0)
             logs_list = self.logs.get(time_key) or []
 
             for log in logs_list:
                 section = log['resource'].strip("/").split("/", 1)[0]
-                if section_hits.get(section):
-                    section_hits[section] = section_hits[section] + 1
-                else:
-                    section_hits[section] = 1
+                add_to_dict(section_hits, section, 1)
 
         if section_hits != {}:
+            # updating overall traffic data store with 10 seconds worth of data
             for section_name, num_hits in section_hits.items():
-                if self.hits.get(section_name):
-                    self.hits[section_name] = self.hits[section_name] + num_hits
-                else:
-                    self.hits[section_name] = num_hits
+                add_to_dict(self.hits, section_name, num_hits)
 
-            section_name = max(section_hits.iteritems(), key=operator.itemgetter(1))[0]
-            return ("/{}".format(section_name), section_hits[section_name])
-        else:
-            return (None, None)
+            section_name = max(
+                section_hits.iteritems(),
+                key=operator.itemgetter(1)
+            )[0]
+            return "/{}".format(section_name), section_hits[section_name]
+        return None, None
 
     def average_traffic(self, start, seconds):
         """
-        `average_traffic` gives the average # of events that happened in the
-        past `seconds` amount of seconds from the start date time.
+        `average_traffic` gets the average # of events that happened in the
+        past `seconds` amount of seconds from the `start` date time.
+
+        Returns the average traffic.
         """ 
         num_events = 0
         for i in range(0, seconds):
@@ -112,12 +114,13 @@ class LogParser(object):
 
         return float(num_events) / seconds
 
-
     def alert(self, alert_number):
         """
         `alert` goes through the past 120 seconds of traffic, determines the
-        average # of events that occured, compares that to the `alert_number`,
-        and decides whether or not to mark as alert or recovered.
+        average # of events that occured, and compares that to the
+        `alert_number`.
+
+        Returns the average traffic.
         """
         now = utc_now()
         average_traffic = self.average_traffic(now, 120)
@@ -132,11 +135,12 @@ class LogParser(object):
 
         return average_traffic
 
-
     def summary(self):
         """
-        `summary` returns a high-level view of the overall traffic and alerts
-        generated and raised for a time period.
+        `summary` goes through all hits and alert logs to get a high-level view
+        of the overall traffic and alerts.
+
+        Returns a formatted summary of the results.
         """
         summary = ""
         summary += "START: {}\nEND: {}\n\n".format(

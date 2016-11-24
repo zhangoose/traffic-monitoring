@@ -18,6 +18,18 @@ def format_dt(dt):
     return datetime.strftime(dt, "%m/%d/%y - %H:%M:%S %z")
 
 
+def add_to_dict(dictionary, key, value):
+    """
+    `add_to_dict` appends `value` to `key` in `dictionary` if there's already
+    a value for `key`. Otherwise, sets `key` to `value`.
+    """
+    if dictionary.get(key):
+        dictionary[key] += value
+    else:
+        dictionary[key] = value
+    return dictionary
+
+
 def init_windows():
     """
     `init_windows` returns the 4 curses windows.
@@ -35,9 +47,9 @@ def init_windows():
     current_time.box()
 
     alerts.addstr(1, 1, "Alert log: for average traffic", curses.A_BOLD)
-    current_alert.addstr(1, 1, "Current Average Traffic for last 2 minutes", curses.A_BOLD)
-    current_traffic.addstr(1, 1, "Section with most traffic\n(updated every 10 sec)", curses.A_BOLD)
-    traffic.addstr(1, 1, "Overall traffic\n(updated every 10 sec)", curses.A_BOLD)
+    current_alert.addstr(1, 1, "Current Average Traffic for\n last 2 minutes", curses.A_BOLD)
+    current_traffic.addstr(1, 1, "Section with most traffic\n (updated every 10 sec)", curses.A_BOLD)
+    traffic.addstr(1, 1, "Overall traffic\n (updated every 10 sec)", curses.A_BOLD)
 
     alerts.refresh()
     current_alert.refresh()
@@ -87,7 +99,7 @@ def draw_alerts(alerts, current_alert, log_parser, alert_number):
 
     alerts.addstr(5, 0, messages)
     alerts.addstr(1, 1, "Alert log: for average traffic > {}".format(alert_number), curses.A_BOLD)
-    current_alert.addstr(1, 1, "Current Average Traffic for last 2 minutes", curses.A_BOLD)
+    current_alert.addstr(1, 1, "Current Average Traffic for\n last 2 minutes", curses.A_BOLD)
 
     alerts.refresh()
     current_alert.refresh()
@@ -103,10 +115,11 @@ def draw_traffic(traffic, current_traffic, log_parser):
     traffic.box()
     current_traffic.box()
 
-    hit = log_parser.most_hits()
+    most_hit_name, most_hit_num = log_parser.most_hits()
     traffic_log = ""
-    if hit != (None, None):
-        current_traffic.addstr(5, 3, "{}: {}".format(hit[0], hit[1]))
+    if most_hit_name and most_hit_num:
+        current_traffic.addstr(5, 3,
+            "{}: {}".format(most_hit_name, most_hit_num))
     else:
         current_traffic.addstr(5, 3, "(none)")
 
@@ -114,7 +127,7 @@ def draw_traffic(traffic, current_traffic, log_parser):
         traffic_log += "   /{}: {}\n".format(section_name, num_hits)
 
     traffic.addstr(5, 0, traffic_log)
-    traffic.addstr(1, 1, "Overall traffic\n(updated every 10 sec)", curses.A_BOLD)
-    current_traffic.addstr(1, 1, "Section with most traffic\n(updated every 10 sec)", curses.A_BOLD)
+    traffic.addstr(1, 1, "Overall traffic\n (updated every 10 sec)", curses.A_BOLD)
+    current_traffic.addstr(1, 1, "Section with most traffic\n (updated every 10 sec)", curses.A_BOLD)
     traffic.refresh()
     current_traffic.refresh()

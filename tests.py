@@ -138,3 +138,20 @@ def test_alert_recovered(mock_average_traffic, log_parser):
         (now, False, 3)
     ]
     assert 3 == actual
+
+
+@mock.patch("traffic.format_dt")
+def test_summary(mock_format_dt, log_parser):
+    mock_format_dt.side_effect = ["start time", "end time"]
+    log_parser.hits = {"potatoes": 3, "blue": 1}
+    log_parser.alert_logs = [(None, True, 1), (None, False, 2)]
+    expected = "START: start time\nEND: end time\n\n"\
+            "Overall Traffic:\n"\
+            "\t/blue: 1\n"\
+            "\t/potatoes: 3\n"\
+            "\n\nNumber of high traffic alerts: 1\n"\
+            "Number of recoveries: 1\n"
+
+    actual = log_parser.summary()
+
+    assert expected == actual
